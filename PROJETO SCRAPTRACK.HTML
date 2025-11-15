@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lançamento de Refugo</title>
+    <script src="tailwind.min.js"></script>
+    <script src="chart.min.js"></script>
+    <script src="xlsx.full.min.js"></script>
+    
+    <script src="data.js" defer></script>
+    <script src="main.js" defer></script>
+
+    <style>
+        /* * NOVO: Estilo para definir a imagem de fundo da página
+         */
+        body {
+            /* Usando a URL da imagem fornecida pelo usuário */
+            background-image: url('GRUPO SADA FUNDO.png');
+            background-size: cover; /* Garante que a imagem cubra todo o fundo */
+            background-repeat: no-repeat; /* Evita repetição */
+            background-position: center center; /* Centraliza a imagem */
+            background-attachment: fixed; /* Fixa a imagem para que não role com o conteúdo */
+        }
+        /* Estilo para contêineres principais com leve transparência (branco semi-transparente) */
+        .container-card {
+            /* Cor de fundo base alterada de 'white' para um RGBA branco com 85% de opacidade */
+           background: rgba(255, 255, 255, 0.65);
+            border-radius: 18px;
+            padding: 32px;
+            box-shadow: 0px 4px 18px rgba(0, 0, 0, 0.10);
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Estilo para caixas de informação secundárias com leve transparência */
+        .soft-box {
+            /* Cor de fundo base alterada de #f1f5f9 para um RGBA azul claro semi-transparente */
+            background: rgba(241, 245, 249, 0.55); /* bg-slate-100/75 <-- Alterado para 0.75 */
+            border-radius: 14px;
+            border: 1px solid #dbe3ea;
+            padding: 18px;
+        }
+        /* ... (restante dos estilos existentes) ... */
+        input[readonly] {
+            background-color: #f3f4f6; /* bg-gray-100 */
+            cursor: not-allowed;
+            color: #6b7280; /* text-gray-500 */
+        }
+        /* Estilo para botões de cavidade/defeito/data selecionados */
+        .cavidade-btn.selecionado, .data-fundicao-btn.selecionado {
+            background-color: #2563eb; /* bg-blue-600 */
+            color: white;
+            border-color: #2563eb;
+        }
+
+        /* MUDANÇA (Req 1): Ajuste no botão de defeito */
+        #modal-defeitos-lista .defeito-btn {
+            /* Tamanho e outros estilos */
+            width: 100%;
+            padding: 1.5rem 0.5rem; /* Padding vertical grande */
+            border-width: 2px;
+            border-color: #6b7280; /* bg-gray-500 */
+            border-radius: 0.7rem; /* rounded-lg */
+            font-size: 1.45rem; /* text-xl - Aumenta o número */
+            font-weight: 700; /* font-bold */
+            color: white;
+            background-color: #374151; /* bg-gray-700 */
+            transition: background-color 0.2s;
+             min-height: 4rem; /* Garante altura mínima */
+        }
+         #modal-defeitos-lista .defeito-btn:hover {
+            background-color: #4b5563; /* bg-gray-600 */
+        }
+        #modal-defeitos-lista .defeito-btn.selecionado {
+            background-color: #dc2626; /* bg-red-600 */
+            color: white;
+            border-color: #dc2626;
+        }
+
+
+        .menu-btn[disabled] {
+            background-color: #d1d5db; /* bg-gray-300 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type=number] {
+          -moz-appearance: textfield; /* Firefox */
+        }
+
+        #defeitos-container {
+            display: none; /* Escondido por padrão, substituído pelo modal */
+        }
+
+        .chart-container {
+            position: relative;
+            height:300px;
+            width:100%;
+            max-width: 500px; 
+            margin: auto;
+        }
+        .refugo-cell {
+            text-align: center;
+            color: #dc2626; /* text-red-600 */
+            font-weight: bold;
+        }
+        .zero-cell {
+             text-align: center;
+             color: #6b7280; /* text-gray-500 */
+        }
+
+        /* --- Visual Azul Moderno --- */
+        .btn-primary { background: #2563eb; color:white; border-radius:10px; padding:14px 22px; font-weight:600; transition:0.2s; }
+        .btn-primary:hover { background:#1d4ed8; }
+        .btn-secondary { background:#475569; color:white; border-radius:10px; padding:14px 22px; font-weight:600; transition:0.2s; }
+        .btn-secondary:hover { background:#334155; }
+        .btn-danger { background:#dc2626; color:white; border-radius:10px; padding:14px 22px; font-weight:600; transition:0.2s; }
+        .btn-danger:hover { background:#b91c1c; }
+
+        /* NOVO: Estilos para o Teclado Numérico dentro do Modal */
+        .teclado-btn {
+            padding: 1rem;
+            background-color: #4B5563; /* bg-gray-600 */
+            color: white;
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: 700; /* font-bold */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        .teclado-btn:hover {
+            background-color: #6B7280; /* bg-gray-500 */
+        }
+        .teclado-btn-func {
+            background-color: #D97706; /* bg-yellow-600 */
+        }
+        .teclado-btn-func:hover {
+            background-color: #B45309; /* bg-yellow-700 */
+        }
+        .teclado-btn-bsp {
+            background-color: #E11D48; /* bg-rose-600 */
+        }
+        .teclado-btn-bsp:hover {
+            background-color: #BE123C; /* bg-rose-700 */
+        }
+
+    </style>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%232563eb%27%3E%3Cpath d=%27M19.14 12.94a7.97 7.97 0 0 0 .06-.94 7.97 7.97 0 0 0-.06-.94l2.03-1.58a.5.5 0 0 0 .11-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.96 7.96 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.5.42l-.36 2.54a7.96 7.96 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 7.48a.5.5 0 0 0 .11.64l2.03 1.58c-.04.31-.06.63-.06.94 0 .31.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.11.64l1.92 3.32c.14.24.43.34.68.22l2.39-.96c.5.39 1.04.72 1.62.94l.36 2.54c.05.24.26.42.5.42h3.8c.25 0 .46-.18.5-.42l.36-2.54c.58-.22 1.12-.55 1.62-.94l2.39.96c.25.12.54.02.68-.22l1.92-3.32a.5.5 0 0 0-.11-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z%27/%3E%3C/svg%3E">
+</head>
+<body class="min-h-screen font-sans p-6">
+
+    <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 transition-opacity duration-300" style="display: none;">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full transform transition-all scale-95 opacity-0" id="modal-content">
+            <h3 id="modal-titulo" class="text-lg font-medium text-gray-900">Aviso</h3>
+            <p id="modal-mensagem" class="mt-2 text-sm text-gray-600">Mensagem de erro.</p>
+            <div class="mt-4 text-right">
+                <button onclick="fecharModal('modal')" class="px-4 py-2 btn-primary text-white rounded-md  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modal-defeitos" class="fixed inset-0 bg-gray-900 bg-opacity-90 p-4 md:p-8 z-50 transition-opacity duration-300 flex flex-col" style="display: none; opacity: 0;">
+        <div class="flex-shrink-0 mb-6">
+            <h2 id="modal-defeitos-titulo" class="text-3xl font-bold text-white text-center">
+                Selecione o Defeito para Cavidade ...
+            </h2>
+            <p class="text-lg text-gray-300 text-center">Data de Fundição: <span id="modal-defeitos-data"></span></p>
+        </div>
+
+        <div class="flex-grow overflow-y-auto pr-2">
+            <div id="modal-defeitos-lista" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                </div>
+        </div>
+
+        <div id="teclado-container" class="flex-shrink-0 mt-6" style="display: none;">
+            <label for="teclado-input" class="block text-center text-lg font-medium text-gray-200 mb-2">Quantidade Refugada:</label>
+            <input type="text" id="teclado-input" readonly value="1" class="w-full max-w-xs mx-auto p-3 text-right text-3xl font-mono bg-gray-800 text-white border border-gray-600 rounded-lg mb-4 shadow-inner block">
+            <div class="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+                <button type="button" onclick="manipularTeclado('1')" class="teclado-btn">1</button>
+                <button type="button" onclick="manipularTeclado('2')" class="teclado-btn">2</button>
+                <button type="button" onclick="manipularTeclado('3')" class="teclado-btn">3</button>
+                <button type="button" onclick="manipularTeclado('4')" class="teclado-btn">4</button>
+                <button type="button" onclick="manipularTeclado('5')" class="teclado-btn">5</button>
+                <button type="button" onclick="manipularTeclado('6')" class="teclado-btn">6</button>
+                <button type="button" onclick="manipularTeclado('7')" class="teclado-btn">7</button>
+                <button type="button" onclick="manipularTeclado('8')" class="teclado-btn">8</button>
+                <button type="button" onclick="manipularTeclado('9')" class="teclado-btn">9</button>
+                <button type="button" onclick="manipularTeclado('C')" class="teclado-btn teclado-btn-func">C</button>
+                <button type="button" onclick="manipularTeclado('0')" class="teclado-btn">0</button>
+                <button type="button" onclick="manipularTeclado('BSP')" class="teclado-btn teclado-btn-bsp">⌫</button>
+            </div>
+        </div>
+        <div class="flex-shrink-0 mt-6 space-y-4">
+            <div class="text-center h-8"> 
+                <span id="defeito-selecionado-modal" class="text-3xl font-semibold text-red-400"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                 <button onclick="fecharModal('modal-defeitos')"
+                        class="w-full btn-secondary text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors duration-200 shadow-md">
+                    Cancelar
+                </button>
+                <button onclick="confirmarDefeitosModal()"
+                        id="btn-confirmar-defeito-modal"
+                        class="w-full btn-danger text-white py-4 px-6 rounded-lg font-semibold text-lg transition-colors duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>
+                    Confirmar Refugo
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="w-full max-w-6xl mx-auto my-8">
+        <div id="page-inicial" class="container-card" style="display: block;">
+            <div class="flex flex-col items-center">
+                <img class="w-240 h-24" src="GRUPO SADA LOGO.png" alt="Logo Grupo Sada">
+
+                <h1 class="text-4xl font-bold text-gray-800 my-6">
+                     Lançamento de Refugo
+                </h1>
+
+                <div class="w-full max-w-md space-y-4">
+                    <button onclick="showPage('page-dados')"
+                            class="menu-btn w-full btn-primary text-white py-4 px-6 rounded-lg font-semibold text-lg  transition-colors duration-200 shadow-md">
+                        DADOS INICIAIS
+                    </button>
+                    <button id="btn-menu-apontamento" onclick="showPage('page-apontamento')"
+                            class="menu-btn w-full btn-primary text-white py-4 px-6 rounded-lg font-semibold text-lg  transition-colors duration-200 shadow-md"
+                            disabled>
+                        APONTAMENTO DO REFUGO
+                    </button>
+                    <button id="btn-menu-relatorio" onclick="showPage('page-relatorio')"
+                            class="menu-btn w-full btn-primary text-white py-4 px-6 rounded-lg font-semibold text-lg  transition-colors duration-200 shadow-md"
+                            disabled>
+                        RELATÓRIO DE REFUGO
+                    </button>
+                    </div>
+
+                <footer class="mt-8 pt-4 border-t border-gray-300 w-full max-w-md text-center text-sm text-gray-600">
+                    <p>Desenvolvido por Aristides peres</p>
+					<p>Versão 1.0 novembro de 2025</p>
+                </footer>
+                </div>
+        </div>
+
+        <div id="page-dados" class="container-card w-full max-w-5xl mx-auto" style="display: none;">
+
+            <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+                Dados Iniciais da Inspeção
+            </h1>
+
+            <form id="form-dados-iniciais" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div>
+                    <div>
+                        <label for="funcionario" class="block text-sm font-medium text-gray-700 mb-1">Nome do Funcionário:</label>
+                        <input type="text" id="funcionario" name="funcionario" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="turno" class="block text-sm font-medium text-gray-700 mb-1">Turno de Inspeção:</label>
+                        <select id="turno" name="turno" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Selecione o turno...</option>
+                            <option value="A">Turno A</option>
+                            <option value="B">Turno B</option>
+                            <option value="C">Turno C</option>
+                            
+                        </select>
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="local" class="block text-sm font-medium text-gray-700 mb-1">Local (Linha):</label>
+                        <select id="local" name="local" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Selecione a linha...</option>
+                            <option value="Linha 1">Linha 1</option>
+                            <option value="Linha 2">Linha 2</option>
+                            <option value="Linha 3">Linha 3</option>
+                            <option value="Linha 4">Linha 4</option>
+                            <option value="Linha 5">Linha 5</option>
+                            <option value="Linha 6">Linha 6</option>
+                            <option value="Linha 7">Linha 7</option>
+							<option value="Raio X">Raio X</option>
+							<option value="Ressonacia">Ressonacia</option>
+							<option value="MagnaFlux">MagnaFlux</option>
+							<option value="GP-12">GP-12</option>
+							<option value="Outros">Outros</option>
+
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <div>
+                        <label for="codInterno" class="block text-sm font-medium text-gray-700 mb-1">Código Interno:</label>
+                        <input type="text" id="codInterno" name="codInterno" required
+                               oninput="atualizarDadosPeca()"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Digite o código interno...">
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="cliente" class="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
+                        <input type="text" id="cliente" name="cliente" readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="codPeca" class="block text-sm font-medium text-gray-700 mb-1">Código da Peça:</label>
+                        <input type="text" id="codPeca" name="codPeca" readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label for="dataFundicao" class="block text-sm font-medium text-gray-700 mb-1">Data de Fundição (Inicial):</label>
+                    <input type="text" id="dataFundicao" name="dataFundicao" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ex: 176J"
+                           maxlength="4"
+                           pattern="\d{3}[a-zA-Z]{1}"
+                           title="Digite 3 números seguidos de 1 letra (Ex: 176J)">
+                </div>
+
+                <div class="mt-4">
+                    <label for="cavidades" class="block text-sm font-medium text-gray-700 mb-1">
+                        Número de Cavidades (Ex: 8 ou 3-6)
+                    </label>
+                    <input type="text" id="cavidades" name="cavidades" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ex: 15 ou 10-20">
+                </div>
+                
+                <div class="md:col-span-2 mt-6 grid grid-cols-2 gap-4">
+                    <button type="button" onclick="showPage('page-inicial')"
+                            class="w-full bg-gray-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-gray-700 transition-colors duration-200">
+                        Voltar ao Menu
+                    </button>
+                    <button type="button" onclick="salvarDadosIniciais()"
+                            class="w-full btn-primary text-white py-3 px-4 rounded-md font-semibold  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        Iniciar Apontamento
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="page-apontamento" class="container-card w-full" style="display: none;">
+
+            <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">
+                Apontamento do Refugo
+            </h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <div class="md:col-span-2">
+                    <div class="soft-box mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Peça Atual em Inspeção</h3>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <p><strong>Funcionário:</strong> <span id="ap-funcionario" class="text-gray-700"></span></p>
+                            <p><strong>Cód. Interno:</strong> <span id="ap-codInterno" class="text-gray-700"></span></p>
+                            <p><strong>Cliente:</strong> <span id="ap-cliente" class="text-gray-700"></span></p>
+                            <p><strong>Cód. Peça:</strong> <span id="ap-codPeca" class="text-gray-700"></span></p>
+                            <p><strong>Turno:</strong> <span id="ap-turno" class="text-gray-700"></span></p>
+                            <p><strong>Local:</strong> <span id="ap-local" class="text-gray-700"></span></p>
+                            <p><strong>Nº Cavidades:</strong> <span id="ap-cavidades" class="text-gray-700"></span></p>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-gray-200 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+
+                            <div class="flex-1">
+                                <h4 class="text-sm font-medium text-gray-800 mb-2">Data de Fundição Ativa:</h4>
+                                <div id="data-fundicao-botoes" class="flex flex-wrap gap-2">
+                                    </div>
+                                <div class="flex gap-2 items-center mt-3">
+                                    <input type="text" id="novaDataFundicaoInput"
+                                           class="w-28 px-2 py-1 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                           placeholder="Ex: 177K"
+                                           maxlength="4"
+                                           pattern="\d{3}[a-zA-Z]{1}"
+                                           title="Digite 3 números seguidos de 1 letra (Ex: 176J)">
+                                    <button type="button" onclick="adicionarDataFundicao()"
+                                            class="px-3 py-1 bg-blue-500 text-white rounded-md text-sm font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        + Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 md:text-right">
+                                <h4 class="text-sm font-medium text-gray-800 mb-2">Registrar Peças Liberadas:</h4>
+                                <div class="flex md:justify-end gap-2 items-center mt-3">
+                                    <input type="number" id="qtdPecasLiberadasInput"
+                                           min="0"
+                                           class="w-20 px-2 py-1 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                                           placeholder="Qtd">
+                                    <button type="button" onclick="registrarPecasLiberadas()"
+                                            class="px-3 py-1 bg-green-500 text-white rounded-md text-sm font-semibold hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                        Confirmar Liberadas
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3">1. Selecione a Cavidade (para refugo)</h3>
+                            <div id="cavidade-grid" class="flex flex-wrap gap-2">
+                                </div>
+                        </div>
+
+                        <div id="defeitos-container" style="display: none;">
+                            <h3 id="defeitos-titulo" class="text-lg font-semibold text-gray-800 mb-3">2. Selecione o Defeito</h3>
+                            <div id="defeitos-lista-botoes" class="grid grid-cols-3 gap-2">
+                            </div>
+                        </div>
+                    </div>
+                     </div>
+
+                <div class="md:col-span-1 soft-box max-h-[600px] flex flex-col">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Registro de Atividades (Peça Atual)</h3>
+                    <div id="apontamento-log" class="flex-grow space-y-2 overflow-y-auto text-sm pr-2">
+                        <p class="text-gray-500">Nenhuma atividade registrada ainda.</p>
+                    </div>
+                    <button onclick="confirmarExcluirUltimo()"
+                            class="w-full btn-danger text-sm py-2 px-3 mt-4 rounded-md font-semibold transition-colors duration-200 shadow-md">
+                        Excluir Último Lançamento
+                    </button>
+                </div>
+
+            </div> <div class="mt-8 text-center">
+                <button type="button" onclick="showPage('page-inicial')"
+                        class="w-full max-w-xs bg-gray-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-gray-700 transition-colors duration-200">
+                    Voltar ao Menu
+                </button>
+            </div>
+        </div>
+
+        <div id="page-relatorio" class="container-card w-full" style="display: none;">
+
+            <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">
+                Relatório Detalhado e Gráficos
+            </h1>
+
+            <div class="soft-box p-4 mb-6 flex flex-wrap items-center gap-4 justify-end">
+                <div class="flex flex-wrap gap-2">
+                    
+                    <button onclick="exportarEEnviarEmail()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Exportar e Enviar (Todos Arquivos)
+                    </button>
+
+                    <button onclick="limparTodoConteudo()"
+                            class="px-4 py-2 btn-danger text-white rounded-md font-semibold transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Limpar Conteúdo Atual
+                    </button>
+                </div>
+            </div>
+
+             <h2 class="text-xl font-semibold text-gray-700 mb-4 mt-6 border-t pt-6">Resumo Total por Peça (Lançamentos)</h2>
+             <div id="tabela-resumo-total-container" class="overflow-x-auto mb-8">
+                <p class="text-gray-500 text-center">Calculando resumo...</p>
+            </div>
+
+             <h2 class="text-xl font-semibold text-gray-700 mb-4 mt-6 border-t pt-6">Análise Gráfica (Todas as Datas de Fundição)</h2>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                 <div class="chart-container">
+                     <canvas id="graficoDefeitos"></canvas>
+                     <p id="msg-grafico-defeitos" class="text-gray-500 text-center mt-4 hidden">Sem dados de refugo para exibir o gráfico de Defeitos.</p>
+                 </div>
+                 <div class="chart-container">
+                     <canvas id="graficoCavidades"></canvas>
+                     <p id="msg-grafico-cavidades" class="text-gray-500 text-center mt-4 hidden">Sem dados de refugo para exibir o gráfico de Cavidades.</p>
+                 </div>
+             </div>
+
+             <h2 class="text-xl font-semibold text-gray-700 mb-4 border-t pt-6">Tabela Agrupada (Contagem por Cavidade/Data)</h2>
+            <div id="tabela-relatorio-container" class="overflow-x-auto mb-8">
+                <p class="text-gray-500 text-center">Nenhum dado para exibir. Preencha os Dados Iniciais e faça os apontamentos.</p>
+            </div>
+
+            <div class="mt-8 text-center">
+                <button type="button" onclick="showPage('page-inicial')"
+                        class="w-full max-w-xs bg-gray-600 text-white py-3 px-4 rounded-md font-semibold hover:bg-gray-700 transition-colors duration-200">
+                    Voltar ao Menu
+                </button>
+            </div>
+        </div>
+
+        </div> 
+</body>
+</html>
