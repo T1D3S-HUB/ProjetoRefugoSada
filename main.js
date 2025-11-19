@@ -127,6 +127,8 @@ function limparTodoConteudo() {
             localStorage.removeItem('datasFundicaoDisponiveis');
             localStorage.removeItem('ordemDefeitosAtual');
             localStorage.removeItem('dadosIniciais');
+            // Mantém a chave de última exportação para não resetar o contador de 5 min
+            // localStorage.removeItem(CHAVE_ULTIMA_EXPORTACAO); 
 
             dadosIniciais = {};
             dadosIniciaisPreenchidos = false;
@@ -931,7 +933,7 @@ function distribuirLiberadasInteiro(numCavidades, apontamentosDoGrupo) {
 
 
 // =====================================================================
-// 6. FUNÇÕES DE EXPORTAÇÃO E E-MAIL
+// 6. FUNÇÕES DE EXPORTAÇÃO (SOMENTE DOWNLOAD)
 // =====================================================================
 
 /**
@@ -995,7 +997,7 @@ function gerarNomeArquivoDinamico(tipo = 'Agrupado') {
     const linhaLimpa = String(linha).replace(/[^a-z0-9]/gi, '_');
     const turnoLimpo = String(turno).replace(/[^a-z0-9]/gi, '_');
 
-    return `Relatorio_Refugo_${tipo}_${linhaLimpa}_Turno_${turnoLimpo}_${ano}${mes}${dia}_${hora}${minuto}.xlsx`;
+	return `Relatorio_Refugo_${tipo}_${dia}${mes}${ano}_Turno_${turnoLimpo}_${linhaLimpa}_${hora}${minuto}.xlsx`;
 }
 
 function exportarRelatorioAgrupadoXLSX() {
@@ -1081,63 +1083,57 @@ function exportarRelatorioAgrupadoXLSX() {
     return nomeArquivo;
 }
 
-function exportarEEnviarEmail() {
+// =====================================================================
+// 6.1. CONSTANTES DE CONTROLE DE TEMPO
+// =====================================================================
+const CHAVE_ULTIMA_EXPORTACAO = 'ultimaExportacaoTimestamp';
+// Intervalo de tempo mínimo entre as exportações (5 minutos em milissegundos)
+const INTERVALO_MINIMO_MS = 5 * 60 * 1000; // 300.000 ms
+
+
+/**
+ * Função responsável por exportar os dados (somente download, sem e-mail).
+ * Implementa um bloqueio de 5 minutos entre as chamadas.
+ */
+function exportarRelatorio() {
     if (apontamentos.length === 0) {
-        mostrarModal('Erro', 'Nenhum apontamento encontrado para exportar e enviar.');
+        mostrarModal('Erro', 'Nenhum apontamento encontrado para exportar.');
         return;
     }
+    
+    // --- Lógica de Bloqueio de 5 Minutos ---
+    const agora = Date.now();
+    const ultimaExportacaoStr = localStorage.getItem(CHAVE_ULTIMA_EXPORTACAO);
+    const ultimaExportacao = ultimaExportacaoStr ? parseInt(ultimaExportacaoStr, 10) : 0;
+    
+    // Verifica se o tempo mínimo de 5 minutos passou
+    if (agora - ultimaExportacao < INTERVALO_MINIMO_MS) {
+        // O tempo não passou, bloqueia a execução
+        const tempoRestanteMs = INTERVALO_MINIMO_MS - (agora - ultimaExportacao);
+        const minutosRestantes = Math.ceil(tempoRestanteMs / 60000); // Arredonda para cima
+        
+        mostrarModal(
+            "Exportação Bloqueada 🛑",
+            `A função de exportação está disponível apenas a cada 5 minutos.<br><br>
+             **Favor verificar a pasta de downloads, arquivos já gerados.**<br><br>
+             Tente novamente em aproximadamente **${minutosRestantes} minuto(s)**.
+            `
+        );
+        return; // Sai da função sem executar a exportação
+    }
 
-    // A chamada à função corrigida garante que o arquivo seja gerado corretamente
+    // --- Execução da Exportação ---
     const nomeArquivoAgrupado = exportarRelatorioAgrupadoXLSX();
     
     if (nomeArquivoAgrupado) {
         
-        const dadosParaEmail = dadosIniciaisPreenchidos ? dadosIniciais : JSON.parse(localStorage.getItem('dadosIniciais') || '{}');
+        // 1. Atualiza o timestamp da última exportação
+        localStorage.setItem(CHAVE_ULTIMA_EXPORTACAO, agora.toString());
 
-        const arquivosAnexados = nomeArquivoAgrupado;
-        
-        const emailDestinatario = "gabriel.cardoso@sadasiderurgia.com.br,aristides.peres@sadasiderurgia.com.br";
-        const assuntoEmail = `Relatório de Refugo - Linha ${dadosParaEmail.local || 'N/A'} - Turno ${dadosParaEmail.turno || 'N/A'}`;
-        
-        const corpoEmail = `
-Olá,
-
-Segue em anexo o relatório de refugo AGRUPADO: ${arquivosAnexados}.
-
-**IMPORTANTE:** Por favor, anexe o arquivo (${arquivosAnexados}) que acabou de ser baixado à sua mensagem de e-mail antes de enviar.
-
-Informações da Sessão:
-- Funcionário: ${dadosParaEmail.funcionario || 'N/A'}
-- Linha: ${dadosParaEmail.local || 'N/A'}
-- Turno: ${dadosParaEmail.turno || 'N/A'}
-- Código Interno: ${dadosParaEmail.codInterno || 'N/A'}
-
-Atenciosamente,
-${dadosParaEmail.funcionario || 'Inspetor'}
-`;
-
-        try {
-            if (!navigator.onLine) {
-                mostrarModal('Aviso Offline', `O arquivo (${arquivosAnexados}) foi salvo. O e-mail não pode ser aberto pois você está offline. Conecte-se e tente enviar novamente.`);
-                return;
-            }
-            
-            const mailtoLink = `mailto:${emailDestinatario}`
-                             + `?subject=${encodeURIComponent(assuntoEmail)}`
-                             + `&body=${encodeURIComponent(corpoEmail)}`;
-            
-            window.open(mailtoLink, '_blank');
-
-        } catch (e) {
-            console.error("Erro ao tentar abrir cliente de e-mail:", e);
-            mostrarModal('Erro', `Não foi possível abrir o aplicativo de e-mail. O arquivo (${arquivosAnexados}) foi baixado. Por favor, envie-o manualmente.`);
-            return;
-        }
-        
         mostrarModalDeConfirmacao(
             'Exportação Concluída',
-            `O arquivo (${arquivosAnexados}) foi baixado e o cliente de e-mail foi aberto.<br><br>Deseja **limpar os dados de apontamento atuais** para iniciar um novo projeto?`,
-            'Limpar Dados (Após Envio)',
+            `O arquivo **${nomeArquivoAgrupado}** foi baixado com sucesso.<br><br>Deseja **limpar os dados de apontamento atuais** para iniciar um novo projeto?`,
+            'Limpar Dados',
             () => {
                 limparTodoConteudo();
             }
@@ -1147,6 +1143,7 @@ ${dadosParaEmail.funcionario || 'Inspetor'}
          mostrarModal('Aviso', 'Nenhum dado encontrado para exportar (Verifique se há lançamentos).');
     }
 }
+
 
 // =====================================================================
 // 7. FUNÇÕES PARA OS GRÁFICOS (Chart.js)
@@ -1426,8 +1423,8 @@ window.selecionarCavidade = selecionarCavidade;
 window.manipularTeclado = manipularTeclado;
 window.confirmarDefeitosModal = confirmarDefeitosModal;
 window.confirmarExcluirUltimo = confirmarExcluirUltimo;
-window.exportarEEnviarEmail = exportarEEnviarEmail;
-window.limparTodoConteudo = limparTodoContudo;
+window.exportarRelatorio = exportarRelatorio; // Função AGORA É APENAS DOWNLOAD
+window.limparTodoConteudo = limparTodoConteudo;
 window.fecharModal = fecharModal;
 window.selecionarDefeitoModal = selecionarDefeitoModal;
 window.selecionarDataFundicao = selecionarDataFundicao;
